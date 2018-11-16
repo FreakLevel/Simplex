@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Método Simplex</title>
+    <script src="https://cdn.jsdelivr.net/npm/handsontable-pro/dist/handsontable.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable-pro/dist/handsontable.full.min.css">
+</head>
+<body>
+    <div>
+        Example: z = 3x + 2y + 9z;2x +3y + 5z <= 10;3x + 4y + 1z > 200
+    </div>
+    <div>
+        <label for="txtEjercicio">Ejercicio:</label>
+        <input type="text" name="txtEjercicio" id="txtEjercicio">
+        <input type="button" value="Calcular" onclick="calcular()">
+    </div>
+
+    <div id="hot"></div>
+
+<script>
+    
+    var hotElement = document.querySelector('#hot');
+    var hotConfig = {
+        rowHeaders: true,
+        colHeaders: true,
+        contextMenu: true
+    };
+    let hot = new Handsontable(hotElement, hotConfig);
+
+    function calcular() {
+        var ejercicio = document.getElementById('txtEjercicio');
+        var split = ejercicio.value.split(';');
+        var fo = split[0].split(' ');
+        fo = fo.splice(fo.indexOf('=')+1);
+        var table1 = [];
+        var header = [];
+        var z = [];
+        var positive = true;
+        fo.forEach(elem => {
+            if (elem !== "+") {
+                if(positive) {
+                    if(elem === "-") {
+                        positive = false;
+                    } else {
+                        if (elem.charAt(0) === '-') {
+                            var key = elem.substr(-1);
+                            var value = elem.substr(1, elem.length-1);
+                            header.push(key);
+                            z.push(value);
+                        } else {
+                            var key = elem.substr(-1);
+                            var value = "-"+elem.substr(0, elem.length-1);
+                            header.push(key);
+                            z.push(value);
+                        }
+                    }
+                } else {
+                    var key = elem.substr(-1);
+                    var value = elem.substr(0, elem.length-1);
+                    header.push(key);
+                    z.push(value);
+
+                    positive = true;
+                }
+            }
+        });
+        for (let index = 1; index < split.length; index++) {
+            header.push("s"+index);
+            z.push("0");
+        }
+        header.push("r"," ");
+        z.push("0");
+        table1.push(header);
+        table1.push(z);
+        var first = true;
+        var restrictions = [];
+        split.forEach(function (element, position) {
+            if (first) {
+                first = false;
+            } else {
+                var restriction = [];
+                element.trim().split(" ").forEach(elem => {
+                    if (elem !== "+" && elem !== "<" && elem !== ">" && elem !== "<=" && elem !== ">=") {
+                        if(positive) {
+                            if(elem === "-") {
+                                positive = false;
+                            } else {
+                                var value = ((isNaN(elem)) ? elem.substr(0, elem.length-1) : elem);
+                                restriction.push(value);
+
+                                positive = true;
+                            }
+                        } else {
+                            var value = ((isNaN(elem)) ? "-"+elem.substr(0, elem.length-1) : "-"+elem);
+                            restriction.push(value);
+                            positive = true;
+                        }
+                    }
+                });
+                for (let index = 0; index < split.length-1; index++) {
+                    if (element.trim().includes('>')) {
+                        restriction.splice(-1, 0, (index+1 === position) ? "-1" : "0");
+                    } else if (element.trim().includes('<')) {
+                        restriction.splice(-1, 0, (index+1 === position) ? "1" : "0");
+                    }
+                }
+                table1.push(restriction);
+            }
+        });
+        //var table2 = table.concat([''],table);
+
+        var colPivote = 0;
+        var valueColPivote = 9999999999999999999999;
+
+        for (let index = 0; index < table1[1].length; index++) {
+            if (parseInt(table1[1][index]) < valueColPivote) {
+                valueColPivote = parseInt(table1[1][index]);
+                colPivote = index;
+            }
+        }
+        
+        var rowPivote = 0;
+        var valueRowPivote = 99999999999999999999999999;
+        var elemPivote = 0;
+
+        console.log(colPivote);
+
+        for (let index = 2; index < table1.length; index++) {
+            var col = parseInt(table1[index][colPivote]);
+            if (col > 0) {
+                var length = table1[index].length;
+                var r = parseInt(table1[index][length-1]);
+                table1[index].push(r+'/'+col+'='+(r/col));
+                console.log(table1[index]);
+                if ((r/col) < valueRowPivote) {
+                    rowPivote = index;
+                    valueRowPivote = col;
+                    elemPivote = col;
+                }
+            }
+        }
+
+        var table2 = JSON.parse(JSON.stringify(table1));
+        var toOne = 1/elemPivote;
+        console.log(elemPivote);
+
+        for (let index = 0; index < table2[rowPivote].length-1; index++) {
+            var val = table2[rowPivote][index];
+            var newVal = (val*toOne);
+            if(newVal % 1 === 0) {
+                table2[rowPivote][index] = val*toOne;
+            } else {
+                var denominator = 1/toOne;
+                var reduced = reduce(val, denominator);
+                table2[rowPivote][index] = reduced[0] + "/" + reduced[1];
+            }
+        }
+
+        for (let index = 0; index < table2.length; index++) {
+            if (index > 0 && index !== rowPivote) {
+                var toZero = 1-parseInt(table2[index][colPivote]);
+                for (let i = 0; i < table2[index].length; i++) {
+                    if (table2[rowPivote][i].toString().includes("/")) {
+                        var pivote = table2[rowPivote][i].split("/");
+                        var newVal = (toZero*(parseInt(pivote[0])/parseInt(pivote[1]))) + parseInt(table2[index][i]);
+                        if(newVal % 1 === 0) {
+                            table2[index][i] = newVal;
+                        } else {
+                            var fraction = decimalToFraction(newVal);
+                            table2[index][i] = fraction[0] + "/" + fraction[1];
+                        }
+                    } else {
+                        var newVal = (toZero*(parseInt(table2[rowPivote][i]))) + parseInt(table2[index][i]);
+                        if(newVal % 1 === 0) {
+                            table2[index][i] = newVal;
+                        } else {
+                            var fraction = decimalToFraction(newVal);
+                            table2[index][i] = fraction[0] + "/" + fraction[1];
+                        }
+                    }
+                }
+            }
+        };
+
+        var table = table1.concat([" "], table2);
+        hot.loadData(table);
+    }
+
+    function reduce(numerator,denominator){
+        var gcd = function gcd(a,b){
+            return b ? gcd(b, a%b) : a;
+        };
+        gcd = gcd(numerator,denominator);
+        return [numerator/gcd, denominator/gcd];
+    }
+
+    function decimalToFraction (fraction) {
+        var gcd = function(a, b) {
+            if (b < 0.0000001) return a;                // Since there is a limited precision we need to limit the value.
+
+            return gcd(b, Math.floor(a % b));           // Discard any fractions due to limitations in precision.
+        };
+
+        var len = fraction.toString().length - 2;
+
+        var denominator = Math.pow(10, len);
+        var numerator = fraction * denominator;
+
+        var divisor = gcd(numerator, denominator);    // Should be 5
+
+        numerator /= divisor;                         // Should be 687
+        denominator /= divisor;                       // Should be 2000
+
+        return [Math.floor(numerator), Math.floor(denominator)];
+    }
+
+</script>
+
+</body>
+</html>
