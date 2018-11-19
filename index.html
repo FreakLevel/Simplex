@@ -14,11 +14,13 @@
     </div>
     <div>
         <label for="txtEjercicio">Ejercicio:</label>
-        <input type="text" name="txtEjercicio" id="txtEjercicio">
+        <input type="text" name="txtEjercicio" id="txtEjercicio" value="z = 1x + 1y;200x + 150y <= 4000;25x + 50y <= 1250">
         <input type="button" value="Calcular" onclick="calcular()">
     </div>
 
     <div id="hot"></div>
+
+    <div id="excel"></div>
 
 <script>
     
@@ -30,14 +32,28 @@
     };
     let hot = new Handsontable(hotElement, hotConfig);
 
+    var excelElement = document.querySelector('#excel');
+    var excelConfig = {
+        rowHeaders: true,
+        colHeaders: true,
+        contextMenu: true
+    };
+    let excel = new Handsontable(excelElement, excelConfig);
+
+    let nameColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N'];
+    let countRows = 0;
+
     function calcular() {
         var ejercicio = document.getElementById('txtEjercicio');
         var split = ejercicio.value.split(';');
         var fo = split[0].split(' ');
         fo = fo.splice(fo.indexOf('=')+1);
         var table1 = [];
+        var excel1 = [];
         var header = [];
         var z = [];
+        var changes = [];
+        var posPivote = "";
         var positive = true;
         fo.forEach(elem => {
             if (elem !== "+") {
@@ -71,10 +87,13 @@
             header.push("s"+index);
             z.push("0");
         }
-        header.push("r"," ");
-        z.push("0");
+        header.push("r"," "," ");
+        var colR = header.length-3;
+        z.push("0", " ", " ");
         table1.push(header);
         table1.push(z);
+        excel1.push(header);
+        excel1.push(z);
         var first = true;
         var restrictions = [];
         split.forEach(function (element, position) {
@@ -132,21 +151,33 @@
             if (col > 0) {
                 var length = table1[index].length;
                 var r = parseInt(table1[index][length-1]);
-                table1[index].push(r+'/'+col+'='+(r/col));
+                var fix = JSON.parse(JSON.stringify(table1[index]));
+                table1[index].push(r+'/'+col+'=');
+                table1[index].push(r/col);
+                fix.push("("+r+')/('+col+')=');
+                fix.push("=" + nameColumns[colR] + (index+1) + "/" + nameColumns[colPivote] + (index+1));
+                changes.push(fix);
                 if ((r/col) < valueRowPivote) {
                     rowPivote = index;
                     valueRowPivote = r/col;
                     elemPivote = col;
+                    posPivote = nameColumns[colPivote] + (index+1);
                 }
             }
         }
 
+        for (let index = 0; index < changes.length; index++) {
+            excel1.push(changes[index]);
+        }
+
         var table2 = JSON.parse(JSON.stringify(table1));
+        var excel2 = JSON.parse(JSON.stringify(table2));
         var toOne = 1/elemPivote;
 
         for (let index = 0; index < table2[rowPivote].length-1; index++) {
             var val = table2[rowPivote][index];
             var newVal = (val*toOne);
+            excel2[rowPivote][index] = "=" + nameColumns[index] + (countRows+rowPivote+1) + "*" + toOne;
             if(newVal % 1 === 0) {
                 table2[rowPivote][index] = val*toOne;
             } else {
@@ -156,10 +187,16 @@
             }
         }
 
+        countRows = excel2.length + 1;
+
+        changes = [];
+
         for (let index = 0; index < table2.length; index++) {
             if (index > 0 && index !== rowPivote) {
                 var toZero = 0-parseInt(table2[index][colPivote]);
-                for (let i = 0; i < table2[index].length; i++) {
+                var fix = [];
+                for (let i = 0; i < table2[index].length-2; i++) {
+                    fix.push("=" + toZero + "*" + nameColumns[i] + (countRows+rowPivote+1) + "+" + nameColumns[i] + (index+1));
                     if (table2[rowPivote][i].toString().includes("/")) {
                         var pivote = table2[rowPivote][i].split("/");
                         var newVal = (toZero*(parseInt(pivote[0])/parseInt(pivote[1]))) + parseInt(table2[index][i]);
@@ -185,8 +222,20 @@
                         }
                     }
                 }
+                changes.push(fix);
             }
         };
+
+        var lastAdded = 0;
+        changes.forEach(element => {
+            for (let i = lastAdded; i < excel2.length; i++) {
+                if (i > 0 && i !== rowPivote) {
+                    excel2[i] = element;
+                    lastAdded = i+1;
+                    break;
+                }
+            }
+        });
 
         // Table 3
 
@@ -203,11 +252,16 @@
         rowPivote = 0;
         valueRowPivote = 9999999;
         elemPivote = 0;
+        changes = [];
+        posPivote = "";
 
         for (let index = 2; index < table2.length; index++) {
+            var fix = JSON.parse(JSON.stringify(excel2[index]));
             var col = (table2[index][colPivote]);
             var length = table2[index].length;
-            var r = table2[index][length-2];
+            var r = table2[index][length-3];
+            fix[colR+1] = "("+r+')/('+col+')=';
+            fix[colR+2] = "=" + nameColumns[colR] + (countRows+index+1) + "/" + nameColumns[colPivote] + (countRows+index+1);
             var division, num, den;
             if (r.toString().includes("/")) {
                 var splitter = r.split("/");
@@ -241,10 +295,18 @@
                 rowPivote = index;
                 valueRowPivote = division;
                 elemPivote = col;
+                posPivote = nameColumns[colPivote] + (rowPivote+index+1);
             }
+            changes.push(fix);
+        }
+
+        for (let index = 0; index < changes.length; index++) {
+            excel2[index+2] = changes[index];
         }
 
         var table3 = JSON.parse(JSON.stringify(table2));
+        var excel3 = JSON.parse(JSON.stringify(excel2));
+
         if (elemPivote.includes("/")) {
             var splitter = elemPivote.split("/");
             toOne = 1/(parseInt(splitter[0])/parseInt(splitter[1]));
@@ -254,6 +316,7 @@
 
         for (let index = 0; index < table3[rowPivote].length-1; index++) {
             var val = table3[rowPivote][index];
+            excel3[rowPivote][index] = "=" + nameColumns[index] + (countRows+rowPivote+1) + "*" + toOne;
             var newVal;
             if (val.toString().includes("/")) {
                 var splitter = val.split("/");
@@ -280,8 +343,13 @@
             }
         }
 
+        countRows += excel3.length + 1;
+
+        changes = [];
+
         for (let index = 0; index < table3.length; index++) {
             if (index > 0 && index !== rowPivote) {
+                var fix = [];
                 var toZero;
                 if (table3[index][colPivote].toString().includes("/")) {
                     var splitter = table3[index][colPivote].toString().split("/");
@@ -289,7 +357,8 @@
                 } else {
                     toZero = 0-parseInt(table3[index][colPivote]);
                 }
-                for (let i = 0; i < table3[index].length - 1; i++) {
+                for (let i = 0; i < table3[index].length - 2; i++) {
+                    fix.push("=(" + toZero + "*" + nameColumns[i] + (countRows+rowPivote+1) + ")+" + nameColumns[i] + (excel3.length+index+2));
                     if (table3[rowPivote][i].toString().includes("/")) {
                         var pivote = table3[rowPivote][i].split("/");
                         var newVal;
@@ -329,6 +398,7 @@
                         }
                     }
                 }
+                changes.push(fix);
             }
         };
 
@@ -336,10 +406,27 @@
             table3[index][table3[index].length-1] = "";
         }
 
-        // Result
+        lastAdded = 0;
+        changes.forEach(element => {
+            var added = false;
+            for (let i = lastAdded; i < excel3.length; i++) {
+                if (i > 0 && i !== rowPivote && !added) {
+                    excel3[i] = element;
+                    lastAdded = i+1;
+                    added = true;
+                } else {
+                    if (excel3[i].length > excel3[0].length || i === 0) {
+                        excel3[i] = excel3[i].slice(0, -2);
+                    }
+                }
+            }
+        });
 
+        // Result
+        var excelTable = excel1.concat([" "], excel2, [" "], excel3);
         var table = table1.concat([" "], table2, [" "], table3);
         hot.loadData(table);
+        excel.loadData(excelTable);
     }
 
     function reduce(numerator,denominator){
