@@ -71,7 +71,7 @@
             header.push("s"+index);
             z.push("0");
         }
-        header.push("r"," "," ");
+        header.push("r"," ");
         z.push("0");
         table1.push(header);
         table1.push(z);
@@ -132,8 +132,7 @@
             if (col > 0) {
                 var length = table1[index].length;
                 var r = parseInt(table1[index][length-1]);
-                table1[index].push(r+'/'+col+'=');
-                table1[index].push(r/col);
+                table1[index].push(r+'/'+col+'='+(r/col));
                 if ((r/col) < valueRowPivote) {
                     rowPivote = index;
                     valueRowPivote = r/col;
@@ -145,7 +144,7 @@
         var table2 = JSON.parse(JSON.stringify(table1));
         var toOne = 1/elemPivote;
 
-        for (let index = 0; index < table2[rowPivote].length-2; index++) {
+        for (let index = 0; index < table2[rowPivote].length-1; index++) {
             var val = table2[rowPivote][index];
             var newVal = (val*toOne);
             if(newVal % 1 === 0) {
@@ -190,7 +189,7 @@
         };
 
         // Table 3
-        
+
         colPivote = 0;
         valueColPivote = 9999999;
 
@@ -208,7 +207,7 @@
         for (let index = 2; index < table2.length; index++) {
             var col = (table2[index][colPivote]);
             var length = table2[index].length;
-            var r = table2[index][length-3];
+            var r = table2[index][length-2];
             var division, num, den;
             if (r.toString().includes("/")) {
                 var splitter = r.split("/");
@@ -237,8 +236,7 @@
             } else {
                 showDivision = division;
             }
-            table2[index][length-2] = (col.includes("/")) ? r+'/('+col+')=' : r+'/'+col+'=';
-            table2[index][length-1] = showDivision;
+            table2[index][length-1] = (col.includes("/")) ? r+'/('+col+')='+showDivision : r+'/'+col+'='+showDivision;
             if (division < valueRowPivote) {
                 rowPivote = index;
                 valueRowPivote = division;
@@ -254,7 +252,7 @@
             toOne = 1/parseInt(elemPivote);
         }
 
-        for (let index = 0; index < table3[rowPivote].length-2; index++) {
+        for (let index = 0; index < table3[rowPivote].length-1; index++) {
             var val = table3[rowPivote][index];
             var newVal;
             if (val.toString().includes("/")) {
@@ -291,7 +289,7 @@
                 } else {
                     toZero = 0-parseInt(table3[index][colPivote]);
                 }
-                for (let i = 0; i < table3[index].length - 2; i++) {
+                for (let i = 0; i < table3[index].length - 1; i++) {
                     if (table3[rowPivote][i].toString().includes("/")) {
                         var pivote = table3[rowPivote][i].split("/");
                         var newVal;
@@ -331,56 +329,15 @@
                         }
                     }
                 }
-                if (index === 1) {
-                    if (table3[rowPivote][table3[rowPivote].length-3].toString().includes("/")) {
-                        var pivote = table3[rowPivote][table3[rowPivote].length-3].split("/");
-                        var newVal;
-                        if (table3[index][table3[index].length-2].toString().includes("/")) {
-                            var splitter = table3[index][table3[index].length-2].toString().split("/");
-                            newVal = parseInt(splitter[0])/parseInt(splitter[1]);
-                        } else {
-                            newVal = parseInt(table3[index][table3[rowPivote].length-2]);
-                        }
-                        newVal = (toZero*(parseInt(pivote[0])/parseInt(pivote[1]))) + newVal;
-                        if(newVal % 1 === 0) {index
-                            table3[index][table3[index].length-2] = newVal;
-                        } else {
-                            var fraction;
-                            if (newVal.toString().includes("-")) {
-                                fraction = decimalToFraction(newVal.toString().substr(1));
-                                table3[index][table3[index].length-2] = "-" + fraction[0] + "/" + fraction[1];
-                            } else {
-                                fraction = decimalToFraction(newVal);
-                                table3[index][table3[index].length-2] = fraction[0] + "/" + fraction[1];
-                            }
-                        }
-                    } else {
-                        var newVal;
-                        if (table3[index][table3[index].length-2].toString().includes("/")) {
-                            var splitter = table3[index][table3[index].length-2].toString().split("/");
-                            newVal = parseInt(splitter[0])/parseInt(splitter[1]);
-                        } else {
-                            newVal = parseInt(table3[index][table3[index].length-2]);
-                        }
-                        newVal = (toZero*(parseInt(table3[rowPivote][table3[rowPivote].length-3]))) + newVal;
-                        if(newVal % 1 === 0) {
-                            table3[index][table3[index].length-2] = newVal;
-                        } else {
-                            var fraction = decimalToFraction(newVal);
-                            table3[index][table3[index].length-2] = fraction[0] + "/" + fraction[1];
-                        }
-                    }
-                }
             }
         };
 
         for (let index = 2; index < table3.length; index++) {
             table3[index][table3[index].length-1] = "";
-            table3[index][table3[index].length-2] = "";
         }
 
         // Result
-        
+
         var table = table1.concat([" "], table2, [" "], table3);
         hot.loadData(table);
     }
