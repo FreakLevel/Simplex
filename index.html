@@ -269,7 +269,7 @@
             } else {
                 num = parseInt(r);
             }
-            if (col.includes("/")) {
+            if (col.toString().includes("/")) {
                 var splitter = col.split("/");
                 den = parseInt(splitter[0]) / parseInt(splitter[1]);
             } else {
@@ -290,7 +290,7 @@
             } else {
                 showDivision = division;
             }
-            table2[index][length-2] = (col.includes("/")) ? r+'/('+col+')=' : r+'/'+col+'=';
+            table2[index][length-2] = (col.toString().includes("/")) ? r+'/('+col+')=' : r+'/'+col+'=';
             table2[index][length-1] = showDivision;
             if (division < valueRowPivote) {
                 rowPivote = index;
