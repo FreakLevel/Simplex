@@ -10,11 +10,18 @@
 </head>
 <body>
     <div>
-        Example: z = 1x + 1y;200x + 150y <= 4000;25x + 50y <= 1250
+        Examples:
+        <br>
+        <ul>
+            <li>z = 1x + 1y;200x + 150y <= 4000;25x + 50y <= 1250</li>
+            <li>z = 450x + 600y;1x <= 400;1y <= 300;1x + 1y <= 500</li>
+            <li>z = 50x + 80y;1x + 2y <= 120;1x + 1y <= 90</li>
+            <li>z = 500x + 300y;20x + 10y <= 1000;3x + 2y <= 180</li>
+        </ul>
     </div>
     <div>
         <label for="txtEjercicio">Ejercicio:</label>
-        <input type="text" name="txtEjercicio" id="txtEjercicio" value="z = 1x + 1y;200x + 150y <= 4000;25x + 50y <= 1250">
+        <input type="text" name="txtEjercicio" id="txtEjercicio" value="">
         <input type="button" value="Calcular" onclick="calcular()">
     </div>
 
@@ -44,6 +51,7 @@
     let countRows = 0;
 
     function calcular() {
+        countRows = 0;
         var ejercicio = document.getElementById('txtEjercicio');
         var split = ejercicio.value.split(';');
         var fo = split[0].split(' ');
@@ -103,6 +111,18 @@
                 var restriction = [];
                 element.trim().split(" ").forEach(elem => {
                     if (elem !== "+" && elem !== "<" && elem !== ">" && elem !== "<=" && elem !== ">=") {
+                        var key = elem.substr(-1);
+                        var keyPos = 0;
+                        header.find(function (h, i) {
+                            if (key === h) {
+                                keyPos = i;
+                            }
+                        });
+                        
+                        while (restriction.length < keyPos) {
+                            restriction.push(0);
+                        }
+
                         if(positive) {
                             if(elem === "-") {
                                 positive = false;
@@ -119,6 +139,19 @@
                         }
                     }
                 });
+
+                var firstS = -1;
+
+                header.find(function (h, i) {
+                    if (h.includes("s") && h.length > 1 && firstS < 0) {
+                        firstS = i;
+                    }
+                })
+
+                for (let index = restriction.length-1; index < firstS; index++) {
+                    restriction.splice(1, 0, 0);
+                }
+
                 for (let index = 0; index < split.length-1; index++) {
                     if (element.trim().includes('>')) {
                         restriction.splice(-1, 0, (index+1 === position) ? "-1" : "0");
@@ -163,6 +196,13 @@
                     elemPivote = col;
                     posPivote = nameColumns[colPivote] + (index+1);
                 }
+            } else {
+                var fix = JSON.parse(JSON.stringify(table1[index]));
+                fix.push(" ");
+                fix.push(" ");
+                table1[index].push(" ");
+                table1[index].push(" ");
+                changes.push(fix);
             }
         }
 
@@ -260,8 +300,6 @@
             var col = (table2[index][colPivote]);
             var length = table2[index].length;
             var r = table2[index][length-3];
-            fix[colR+1] = "("+r+')/('+col+')=';
-            fix[colR+2] = "=" + nameColumns[colR] + (countRows+index+1) + "/" + nameColumns[colPivote] + (countRows+index+1);
             var division, num, den;
             if (r.toString().includes("/")) {
                 var splitter = r.split("/");
@@ -275,28 +313,35 @@
             } else {
                 den = parseInt(col);
             }
-            division = num / den;
-            var showDivision;
-            if(division % 1 !== 0) {
-                var fraction;
-                if (division.toString().includes("-")) {
-                    fraction = decimalToFraction(division.toString().substr(1));
-                    fraction = reduce(fraction[0], fraction[1]);
-                    showDivision = "-" + fraction[0] + "/" + fraction[1];
+            if (den > 0) {
+                fix[colR+1] = "("+r+')/('+col+')=';
+                fix[colR+2] = "=" + nameColumns[colR] + (countRows+index+1) + "/" + nameColumns[colPivote] + (countRows+index+1);
+                division = num / den;
+                var showDivision;
+                if(division % 1 !== 0) {
+                    var fraction;
+                    if (division.toString().includes("-")) {
+                        fraction = decimalToFraction(division.toString().substr(1));
+                        fraction = reduce(fraction[0], fraction[1]);
+                        showDivision = "-" + fraction[0] + "/" + fraction[1];
+                    } else {
+                        fraction = decimalToFraction(division);
+                        showDivision = fraction[0] + "/" + fraction[1];
+                    }
                 } else {
-                    fraction = decimalToFraction(division);
-                    showDivision = fraction[0] + "/" + fraction[1];
+                    showDivision = division;
+                }
+                table2[index][length-2] = (col.toString().includes("/")) ? r+'/('+col+')=' : r+'/'+col+'=';
+                table2[index][length-1] = showDivision;
+                if (division < valueRowPivote) {
+                    rowPivote = index;
+                    valueRowPivote = division;
+                    elemPivote = col;
+                    posPivote = nameColumns[colPivote] + (rowPivote+index+1);
                 }
             } else {
-                showDivision = division;
-            }
-            table2[index][length-2] = (col.toString().includes("/")) ? r+'/('+col+')=' : r+'/'+col+'=';
-            table2[index][length-1] = showDivision;
-            if (division < valueRowPivote) {
-                rowPivote = index;
-                valueRowPivote = division;
-                elemPivote = col;
-                posPivote = nameColumns[colPivote] + (rowPivote+index+1);
+                fix[colR+1] = " ";
+                fix[colR+2] = " ";
             }
             changes.push(fix);
         }
@@ -308,7 +353,7 @@
         var table3 = JSON.parse(JSON.stringify(table2));
         var excel3 = JSON.parse(JSON.stringify(excel2));
 
-        if (elemPivote.includes("/")) {
+        if (elemPivote.toString().includes("/")) {
             var splitter = elemPivote.split("/");
             toOne = 1/(parseInt(splitter[0])/parseInt(splitter[1]));
         } else {
