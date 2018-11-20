@@ -11,17 +11,29 @@
 <body>
     <div>
         Examples:
-        <br>
-        <ul>
-            <li>z = 1x + 1y;200x + 150y <= 4000;25x + 50y <= 1250</li>
-            <li>z = 450x + 600y;1x <= 400;1y <= 300;1x + 1y <= 500</li>
-            <li>z = 50x + 80y;1x + 2y <= 120;1x + 1y <= 90</li>
-            <li>z = 500x + 300y;20x + 10y <= 1000;3x + 2y <= 180</li>
-        </ul>
+        <section>
+            <h3>Maximize</h3>
+            <ul>
+                <li>z = 1x + 1y;200x + 150y <= 4000;25x + 50y <= 1250</li>
+                <li>z = 450x + 600y;1x <= 400;1y <= 300;1x + 1y <= 500</li>
+                <li>z = 50x + 80y;1x + 2y <= 120;1x + 1y <= 90</li>
+                <li>z = 500x + 300y;20x + 10y <= 1000;3x + 2y <= 180</li>
+            </ul>
+        </section>
+        <section>
+            <h3>Minimize</h3>
+            <ul>
+                <li>z = 500x + 600y;10x >= 100;100x + 200y >= 8000;250x + 300y <= 15000</li>
+            </ul>
+        </section>
     </div>
     <div>
         <label for="txtEjercicio">Ejercicio:</label>
         <input type="text" name="txtEjercicio" id="txtEjercicio" value="">
+        <br>
+        <input type="radio" value="1" name="rType" id="rType1"><label for="rType1">Maximize</label>
+        <input type="radio" value="0" name="rType" id="rType0"><label for="rType0">Minimize</label>
+        <br>
         <input type="button" value="Calcular" onclick="calcular()">
     </div>
 
@@ -52,6 +64,7 @@
 
     function calcular() {
         countRows = 0;
+        var rType = (document.querySelector("input[type='radio']:checked").value === "1") ? true : false;
         var ejercicio = document.getElementById('txtEjercicio');
         var split = ejercicio.value.split(';');
         var fo = split[0].split(' ');
@@ -159,6 +172,14 @@
                         restriction.splice(-1, 0, (index+1 === position) ? "1" : "0");
                     }
                 }
+                
+                for (let index = firstS; index < restriction.length-1; index++) {
+                    if (restriction[index] === "-1") {
+                        for (let i = 0; i < restriction.length; i++) {
+                            restriction[i] = parseInt(restriction[i]) * -1;
+                        }
+                    }
+                }
                 table1.push(restriction);
             }
         });
@@ -167,47 +188,99 @@
 
         var colPivote = 0;
         var valueColPivote = 9999999;
-
-        for (let index = 0; index < table1[1].length; index++) {
-            if (parseInt(table1[1][index]) < valueColPivote) {
-                valueColPivote = parseInt(table1[1][index]);
-                colPivote = index;
-            }
-        }
-        
         var rowPivote = 0;
         var valueRowPivote = 9999999;
         var elemPivote = 0;
 
-        for (let index = 2; index < table1.length; index++) {
-            var col = parseInt(table1[index][colPivote]);
-            if (col > 0) {
-                var length = table1[index].length;
-                var r = parseInt(table1[index][length-1]);
-                var fix = JSON.parse(JSON.stringify(table1[index]));
-                table1[index].push(r+'/'+col+'=');
-                table1[index].push(r/col);
-                fix.push("("+r+')/('+col+')=');
-                fix.push("=" + nameColumns[colR] + (index+1) + "/" + nameColumns[colPivote] + (index+1));
-                changes.push(fix);
-                if ((r/col) < valueRowPivote) {
-                    rowPivote = index;
-                    valueRowPivote = r/col;
-                    elemPivote = col;
-                    posPivote = nameColumns[colPivote] + (index+1);
+        if (rType) {
+            for (let index = 0; index < table1[1].length; index++) {
+                if (parseInt(table1[1][index]) < valueColPivote) {
+                    valueColPivote = parseInt(table1[1][index]);
+                    colPivote = index;
                 }
-            } else {
-                var fix = JSON.parse(JSON.stringify(table1[index]));
-                fix.push(" ");
-                fix.push(" ");
-                table1[index].push(" ");
-                table1[index].push(" ");
-                changes.push(fix);
             }
+
+            for (let index = 2; index < table1.length; index++) {
+                var col = parseInt(table1[index][colPivote]);
+                if (col != 0) {
+                    var length = table1[index].length;
+                    var r = parseInt(table1[index][length-1]);
+                    var fix = JSON.parse(JSON.stringify(table1[index]));
+                    table1[index].push(r+'/'+col+'=');
+                    table1[index].push(r/col);
+                    fix.push("("+r+')/('+col+')=');
+                    fix.push("=" + nameColumns[colR] + (index+1) + "/" + nameColumns[colPivote] + (index+1));
+                    changes.push(fix);
+                    if ((r/col) < valueRowPivote) {
+                        rowPivote = index;
+                        valueRowPivote = r/col;
+                        elemPivote = col;
+                        posPivote = nameColumns[colPivote] + (index+1);
+                    }
+                } else {
+                    var fix = JSON.parse(JSON.stringify(table1[index]));
+                    fix.push(" ");
+                    fix.push(" ");
+                    table1[index].push(" ");
+                    table1[index].push(" ");
+                    changes.push(fix);
+                }
+            }
+        } else {
+            var sPos = -1;
+            for (let index = 1; index < table1.length; index++) {
+                var length = (table1[index].length === header.length) ? table1[index].length-3 : table1[index].length-1;
+                if (parseInt(table1[index][length]) < valueRowPivote) {
+                    valueRowPivote = parseInt(table1[index][length]);
+                    rowPivote = index;
+                    for (let i = 0; i < header.length; i++) {
+                        if (sPos < 0 && header[i].includes('s')) {
+                            sPos = i;
+                        }
+                    }
+                }
+            }
+
+            table1.forEach(function (e, i) {
+                if(i > 1) {
+                    excel1.push(e);
+                    if (i !== rowPivote) {
+                        excel1[i].push(" ", " ");
+                    }
+                }
+            });
+
+            var vFO = 0;
+
+            for (let index = 0; index < sPos; index++) {
+                var cell = parseInt(table1[rowPivote][index]);
+                if (cell != 0) {
+                    var fo = parseInt(table1[1][index]);
+                    
+                    if ((fo/cell) < valueColPivote) {
+                        colPivote = index;
+                        valueColPivote = fo/cell;
+                        elemPivote = cell;
+                        posPivote = nameColumns[colPivote] + (index+1);
+                        vFO = fo;
+                    }
+                }
+            }
+
+            changes = JSON.parse(JSON.stringify(table1[rowPivote]));
+
+            table1[rowPivote].push(vFO+'/'+elemPivote+'=');
+            table1[rowPivote].push(vFO/elemPivote);
+            changes.push("("+vFO+')/('+elemPivote+')=');
+            changes.push("=" + nameColumns[colPivote] + (2) + "/" + nameColumns[colPivote] + (rowPivote+1));
         }
 
-        for (let index = 0; index < changes.length; index++) {
-            excel1.push(changes[index]);
+        if (rType) {
+            for (let index = 0; index < changes.length; index++) {
+                excel1.push(changes[index]);
+            }
+        } else {
+            excel1[rowPivote] = changes;
         }
 
         var table2 = JSON.parse(JSON.stringify(table1));
@@ -277,73 +350,132 @@
             }
         });
 
+        for (let index = 2; index < excel2.length; index++) {
+            excel2[index][colR+1] = " ";
+            excel2[index][colR+2] = " ";
+        }
+
         // Table 3
 
         colPivote = 0;
         valueColPivote = 9999999;
-
-        for (let index = 0; index < table2[1].length; index++) {
-            if (parseInt(table2[1][index]) < valueColPivote) {
-                valueColPivote = parseInt(table2[1][index]);
-                colPivote = index;
-            }
-        }
-        
         rowPivote = 0;
         valueRowPivote = 9999999;
         elemPivote = 0;
         changes = [];
         posPivote = "";
 
-        for (let index = 2; index < table2.length; index++) {
-            var fix = JSON.parse(JSON.stringify(excel2[index]));
-            var col = (table2[index][colPivote]);
-            var length = table2[index].length;
-            var r = table2[index][length-3];
-            var division, num, den;
-            if (r.toString().includes("/")) {
-                var splitter = r.split("/");
-                num = parseInt(splitter[0]) / parseInt(splitter[1]);
-            } else {
-                num = parseInt(r);
+        if (rType) {
+            for (let index = 0; index < table2[1].length; index++) {
+                if (parseInt(table2[1][index]) < valueColPivote) {
+                    valueColPivote = parseInt(table2[1][index]);
+                    colPivote = index;
+                }
             }
-            if (col.toString().includes("/")) {
-                var splitter = col.split("/");
-                den = parseInt(splitter[0]) / parseInt(splitter[1]);
-            } else {
-                den = parseInt(col);
-            }
-            if (den > 0) {
-                fix[colR+1] = "("+r+')/('+col+')=';
-                fix[colR+2] = "=" + nameColumns[colR] + (countRows+index+1) + "/" + nameColumns[colPivote] + (countRows+index+1);
-                division = num / den;
-                var showDivision;
-                if(division % 1 !== 0) {
-                    var fraction;
-                    if (division.toString().includes("-")) {
-                        fraction = decimalToFraction(division.toString().substr(1));
-                        fraction = reduce(fraction[0], fraction[1]);
-                        showDivision = "-" + fraction[0] + "/" + fraction[1];
+
+            for (let index = 2; index < table2.length; index++) {
+                var fix = JSON.parse(JSON.stringify(excel2[index]));
+                var col = (table2[index][colPivote]);
+                var length = table2[index].length;
+                var r = table2[index][length-3];
+                var division, num, den;
+                if (r.toString().includes("/")) {
+                    var splitter = r.split("/");
+                    num = parseInt(splitter[0]) / parseInt(splitter[1]);
+                } else {
+                    num = parseInt(r);
+                }
+                if (col.toString().includes("/")) {
+                    var splitter = col.split("/");
+                    den = parseInt(splitter[0]) / parseInt(splitter[1]);
+                } else {
+                    den = parseInt(col);
+                }
+                if (den != 0) {
+                    fix[colR+1] = "("+r+')/('+col+')=';
+                    fix[colR+2] = "=" + nameColumns[colR] + (countRows+index+1) + "/" + nameColumns[colPivote] + (countRows+index+1);
+                    division = num / den;
+                    var showDivision;
+                    if(division % 1 !== 0) {
+                        var fraction;
+                        if (division.toString().includes("-")) {
+                            fraction = decimalToFraction(division.toString().substr(1));
+                            fraction = reduce(fraction[0], fraction[1]);
+                            showDivision = "-" + fraction[0] + "/" + fraction[1];
+                        } else {
+                            fraction = decimalToFraction(division);
+                            showDivision = fraction[0] + "/" + fraction[1];
+                        }
                     } else {
-                        fraction = decimalToFraction(division);
-                        showDivision = fraction[0] + "/" + fraction[1];
+                        showDivision = division;
+                    }
+                    table2[index][length-2] = (col.toString().includes("/")) ? r+'/('+col+')=' : r+'/'+col+'=';
+                    table2[index][length-1] = showDivision;
+                    if (division < valueRowPivote) {
+                        rowPivote = index;
+                        valueRowPivote = division;
+                        elemPivote = col;
+                        posPivote = nameColumns[colPivote] + (rowPivote+index+1);
                     }
                 } else {
-                    showDivision = division;
+                    fix[colR+1] = " ";
+                    fix[colR+2] = " ";
                 }
-                table2[index][length-2] = (col.toString().includes("/")) ? r+'/('+col+')=' : r+'/'+col+'=';
-                table2[index][length-1] = showDivision;
-                if (division < valueRowPivote) {
-                    rowPivote = index;
-                    valueRowPivote = division;
-                    elemPivote = col;
-                    posPivote = nameColumns[colPivote] + (rowPivote+index+1);
-                }
-            } else {
-                fix[colR+1] = " ";
-                fix[colR+2] = " ";
+                changes.push(fix);
             }
-            changes.push(fix);
+        } else {
+            var sPos = -1;
+            for (let index = 1; index < table2.length; index++) {
+                var length = table2[index].length-3;
+                if (parseInt(table2[index][length]) < valueRowPivote) {
+                    valueRowPivote = parseInt(table2[index][length]);
+                    rowPivote = index;
+                    for (let i = 0; i < header.length; i++) {
+                        if (sPos < 0 && header[i].includes('s')) {
+                            sPos = i;
+                        }
+                    }
+                }
+            }
+
+            var vFO = 0;
+
+            for (let index = 0; index < sPos; index++) {
+                var cell = parseInt(table2[rowPivote][index]);
+                var fo = parseInt(table2[1][index]);
+                var division, num, den;
+                if (fo.toString().includes("/")) {
+                    var splitter = fo.split("/");
+                    num = parseInt(splitter[0]) / parseInt(splitter[1]);
+                } else {
+                    num = parseInt(fo);
+                }
+                if (cell.toString().includes("/")) {
+                    var splitter = cell.split("/");
+                    den = parseInt(splitter[0]) / parseInt(splitter[1]);
+                } else {
+                    den = parseInt(cell);
+                }
+                if (den != 0) {
+                    if ((num/den) < valueColPivote) {
+                        colPivote = index;
+                        valueColPivote = num/den;
+                        elemPivote = den;
+                        posPivote = nameColumns[colPivote] + (index+1);
+                        vFO = fo;
+                    }
+                }
+            }
+
+            for (let index = 2; index < table2.length; index++) {
+                table2[index][colR+1] = " ";
+                table2[index][colR+2] = " ";
+            }
+
+            table2[rowPivote][colR+1] = '('+vFO+')/('+elemPivote+')=';
+            table2[rowPivote][colR+2] = vFO/elemPivote;
+            excel2[rowPivote][colR+1] = "("+vFO+')/('+elemPivote+')=';
+            excel2[rowPivote][colR+2] = "=" + nameColumns[colPivote] + (2+countRows) + "/" + nameColumns[colPivote] + (rowPivote+countRows+1);
         }
 
         for (let index = 0; index < changes.length; index++) {
@@ -362,29 +494,31 @@
 
         for (let index = 0; index < table3[rowPivote].length-1; index++) {
             var val = table3[rowPivote][index];
-            excel3[rowPivote][index] = "=" + nameColumns[index] + (countRows+rowPivote+1) + "*" + toOne;
-            var newVal;
-            if (val.toString().includes("/")) {
-                var splitter = val.split("/");
-                newVal = (parseInt(splitter[0])/parseInt(splitter[1]))*toOne;
-            } else {
-                newVal = (parseInt(val)*toOne);
-            }
-            
-            if(newVal % 1 === 0) {
-                table3[rowPivote][index] = newVal;
-            } else {
-                var denominator = 1/toOne;
+            if (val.toString().trim() !== "") {
+                excel3[rowPivote][index] = "=" + nameColumns[index] + (countRows+rowPivote+1) + "*" + toOne;
+                var newVal;
                 if (val.toString().includes("/")) {
                     var splitter = val.split("/");
-                    newVal = parseInt(splitter[0])/parseInt(splitter[1]);
+                    newVal = (parseInt(splitter[0])/parseInt(splitter[1]))*toOne;
                 } else {
-                    newVal = parseInt(val);
+                    newVal = (parseInt(val)*toOne);
                 }
-                var reduced = reduce(newVal, denominator);
-                table3[rowPivote][index] = reduced[0] + "/" + reduced[1];
-                if (table3[rowPivote][index].toString().includes("-")) {
-                    table3[rowPivote][index] = "-" + table3[rowPivote][index].toString().replace("-", "");
+                
+                if(newVal % 1 === 0) {
+                    table3[rowPivote][index] = newVal;
+                } else {
+                    var denominator = 1/toOne;
+                    if (val.toString().includes("/")) {
+                        var splitter = val.split("/");
+                        newVal = parseInt(splitter[0])/parseInt(splitter[1]);
+                    } else {
+                        newVal = parseInt(val);
+                    }
+                    var reduced = reduce(newVal, denominator);
+                    table3[rowPivote][index] = reduced[0] + "/" + reduced[1];
+                    if (table3[rowPivote][index].toString().includes("-")) {
+                        table3[rowPivote][index] = "-" + table3[rowPivote][index].toString().replace("-", "");
+                    }
                 }
             }
         }
@@ -450,6 +584,11 @@
 
         for (let index = 2; index < table3.length; index++) {
             table3[index][table3[index].length-1] = "";
+        }
+
+        for (let index = 2; index < table3.length; index++) {
+            table3[index][colR+1] = " ";
+            table3[index][colR+2] = " ";
         }
 
         lastAdded = 0;
